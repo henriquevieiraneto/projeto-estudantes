@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gerenciamento Escolar Completo</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 900px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0 0 0 / 10%); }
+        h1 { color: #333; text-align: center; }
+        h2 { border-bottom: 2px solid #007bff; padding-bottom: 5px; margin-top: 25px; color: #007bff; }
+        pre { background-color: #e9ecef; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+        button { padding: 10px 15px; margin-top: 10px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 4px; transition: background-color 0.3s; }
+        button.delete { background-color: #dc3545; }
+        button:hover { background-color: #1e7e34; }
+        button.delete:hover { background-color: #c82333; }
+        hr { margin: 30px 0; border: 0; border-top: 1px solid #ccc; }
+        input[type="text"], input[type="email"], input[type="password"], select, input[type="number"] { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; width: 200px; margin-bottom: 10px; box-sizing: border-box; }
+        .form-group { margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .hidden { display: none; }
+        .edit-row input { width: 49%; }
+    </style>
+</head>
+<body onload="carregarMaterias()">
+    <div class="container">
+        <h1>🎓 Sistema de Gerenciamento Escolar</h1>
+        
+        <h2>1. Cadastro Completo de Usuário</h2>
+        <div class="form-group">
+            <input type="email" id="regEmail" placeholder="Email (Login)">
+            <input type="password" id="regSenha" placeholder="Senha (Login)">
+            <input type="text" id="regNome" placeholder="Nome Completo">
+            <input type="text" id="regMatricula" placeholder="Matrícula/Registro">
+            <select id="regTipo" onchange="toggleSpecificField()">
+                <option value="ESTUDANTE">ESTUDANTE</option>
+                <option value="PROFESSOR">PROFESSOR</option>
+                <option value="COORDENACAO">COORDENAÇÃO</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="specific-field-group">
+            <input type="text" id="regCampoEspecifico" placeholder="Curso/Departamento/Setor">
+            <button type="button" onclick="adicionarNovaMateria()">+ Nova Matéria/Curso</button>
+        </div>
+        
+        <div class="form-group" id="materias-group">
+            <label>Matérias Selecionadas (Preenchem o Curso/Departamento):</label>
+            <div id="materias-checkboxes">Carregando matérias...</div>
+        </div>
+
+        <button onclick="registrarUsuario()">Cadastrar Usuário</button>
+        <pre id="resultAuthReg"></pre>
+        
+        <hr>
+
+        <h2>2. Gerenciamento Completo (Edição/Exclusão)</h2>
+        <p>Use o ID do usuário (Usuarios.id_usuario) e o Tipo para editar ou excluir.</p>
+        <div class="form-group">
+            <input type="number" id="manageId" placeholder="ID do Usuário a Gerenciar">
+            <select id="manageTipo">
+                <option value="ESTUDANTE">ESTUDANTE</option>
+                <option value="PROFESSOR">PROFESSOR</option>
+                <option value="COORDENACAO">COORDENAÇÃO</option>
+            </select>
+            <button onclick="carregarDadosParaEdicao()">Carregar Dados para Edição</button>
+            <button class="delete" onclick="excluirUsuario()">Excluir</button>
+        </div>
+        
+        <div class="form-group" id="edit-fields-group">
+            <h3>Dados Atuais para Edição</h3>
+            <input type="email" id="editEmail" placeholder="Novo Email (Obrigatório)">
+            <input type="password" id="editSenha" placeholder="Nova Senha (Opcional)">
+            <input type="text" id="editNome" placeholder="Novo Nome Completo">
+            <input type="text" id="editMatricula" placeholder="Nova Matrícula">
+            <input type="text" id="editCampoEspecifico" placeholder="Novo Curso/Departamento/Setor">
+            
+            <div id="materias-edit-checkboxes" class="form-group">
+                <label>Matérias para Edição:</label>
+                </div>
+            
+            <button onclick="editarUsuario()">Aplicar Edição Total</button>
+        </div>
+        
+        <pre id="resultManage"></pre>
+
+        <hr>
+
+        <h2>3. Login e Consultas</h2>
+        
+        <h3>Login (POST /auth/login)</h3>
+        <div class="form-group">
+            <input type="email" id="loginEmail" placeholder="Email de Login">
+            <input type="password" id="loginSenha" placeholder="Senha">
+            <button onclick="loginUsuario()">Login</button>
+        </div>
+        <pre id="resultAuthLogin"></pre>
+
+        <h3>Detalhes do Usuário (Consulta Segura)</h3>
+        <div class="form-group">
+            <input type="email" id="buscaEmail" placeholder="Email do Usuário">
+            <input type="text" id="buscaMatricula" placeholder="Matrícula do Usuário">
+            <select id="buscaTipo">
+                <option value="ESTUDANTE">ESTUDANTE</option>
+                <option value="PROFESSOR">PROFESSOR</option>
+                <option value="COORDENACAO">COORDENACAO</option>
+            </select>
+            <button onclick="buscarDetalhes()">Buscar Detalhes</button>
+        </div>
+        <pre id="resultDetalhes"></pre>
+
+        <h3>Listar por Matéria</h3>
+        <div class="form-group">
+            <select id="listaTipo">
+                <option value="estudantes">Estudantes</option>
+                <option value="professores">Professores</option>
+            </select>
+            <select id="listaMateria">
+                </select>
+            <button onclick="listarPorMateria()">Listar</button>
+        </div>
+        <pre id="resultLista"></pre>
+
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let materiasDisponiveis = [];
+
+        async function fetchAPI(endpoint, method, body = null, resultId) {
+            const resultElement = document.getElementById(resultId);
+            resultElement.textContent = 'Aguardando resposta...';
+
+            try {
+                const options = { method, headers: { 'Content-Type': 'application/json' } };
+                if (body) { options.body = JSON.stringify(body); }
+
+                const response = await fetch(`${API_URL}${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}: ${result.error || result.message || response.statusText}`);
+                }
+                
+                // Formatação simples para melhor visualização do ID na lista
+                if (resultId === 'resultLista' && Array.isArray(result.data)) {
+                    const formattedData = result.data.map(item => {
+                        const idKey = Object.keys(item).find(key => key.startsWith('id_'));
+                        return `ID: ${item[idKey]} | Nome: ${item.nome} | Matrícula: ${item.matricula} | Email: ${item.email} | Info: ${item.curso || item.departamento}`;
+                    }).join('\n');
+                    resultElement.textContent = formattedData || 'Nenhum registro encontrado.';
+                    return result; 
+                }
+                
+                resultElement.textContent = JSON.stringify(result, null, 2);
+                return result; 
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                resultElement.textContent = `Erro na requisição: ${error.message}`;
+                return { error: error.message };
+            }
+        }
+
+        // ==============================================
+        // SETUP INICIAL E LÓGICA DE MATÉRIAS
+        // ==============================================
+        
+        function updateSpecificField() {
+            const checkboxes = document.querySelectorAll('.reg-materia-checkbox:checked');
+            const nomesMaterias = Array.from(checkboxes).map(cb => {
+                const id = parseInt(cb.value);
+                const materia = materiasDisponiveis.find(m => m.id_materia === id);
+                return materia ? materia.nome_materia : '';
+            });
+            
+            const campo = document.getElementById('regCampoEspecifico');
+            campo.value = nomesMaterias.join(', ') || ''; 
+        }
+
+        function toggleSpecificField() {
+            const tipo = document.getElementById('regTipo').value;
+            const materiasGroup = document.getElementById('materias-group');
+            
+            if (tipo === 'ESTUDANTE' || tipo === 'PROFESSOR') {
+                document.getElementById('regCampoEspecifico').placeholder = 'Curso/Departamento (Preenchido pelas matérias)';
+                materiasGroup.classList.remove('hidden');
+            } else if (tipo === 'COORDENACAO') {
+                document.getElementById('regCampoEspecifico').placeholder = 'Setor (Ex: Financeiro)';
+                document.getElementById('regCampoEspecifico').value = '';
+                materiasGroup.classList.add('hidden');
+            }
+        }
+
+        async function carregarMaterias() {
+            try {
+                const response = await fetch(`${API_URL}/materias`);
+                if (!response.ok) {
+                    const errorResult = await response.json();
+                    throw new Error(`Falha no servidor (${response.status}): ${errorResult.error || 'Erro desconhecido'}`);
+                }
+
+                const result = await response.json();
+                materiasDisponiveis = Array.isArray(result.data) ? result.data : []; 
+                
+                const selectLista = document.getElementById('listaMateria');
+                const checkboxesDivReg = document.getElementById('materias-checkboxes');
+                const checkboxesDivEdit = document.getElementById('materias-edit-checkboxes');
+
+                selectLista.innerHTML = '';
+                checkboxesDivReg.innerHTML = '';
+                checkboxesDivEdit.innerHTML = '';
+
+                // Opção "Todas as Matérias" (value=0)
+                const allOption = document.createElement('option');
+                allOption.value = 0; 
+                allOption.textContent = 'Todas as Matérias';
+                allOption.selected = true; 
+                selectLista.appendChild(allOption);
+
+                materiasDisponiveis.forEach(materia => { 
+                    const option = document.createElement('option');
+                    option.value = materia.id_materia;
+                    option.textContent = materia.nome_materia;
+                    selectLista.appendChild(option);
+
+                    criarCheckbox(checkboxesDivReg, materia, 'reg');
+                    criarCheckbox(checkboxesDivEdit, materia, 'edit');
+                });
+
+                if (materiasDisponiveis.length === 0) {
+                    checkboxesDivReg.textContent = 'Nenhuma matéria cadastrada. Use o botão abaixo para adicionar.';
+                }
+
+                toggleSpecificField();
+            } catch (error) {
+                console.error("Erro ao carregar matérias:", error);
+                document.getElementById('materias-checkboxes').textContent = `Erro ao carregar: ${error.message}`;
+            }
+        }
+        
+        function criarCheckbox(container, materia, prefix) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `${prefix}-materia-${materia.id_materia}`;
+            checkbox.value = materia.id_materia;
+            checkbox.className = `${prefix}-materia-checkbox`;
+            
+            if (prefix === 'reg') {
+                checkbox.addEventListener('change', updateSpecificField);
+            }
+            
+            const label = document.createElement('label');
+            label.htmlFor = `${prefix}-materia-${materia.id_materia}`;
+            label.textContent = materia.nome_materia;
+
+            container.appendChild(checkbox);
+            container.appendChild(label);
+        }
+
+        async function adicionarNovaMateria() {
+            const novoNome = prompt("Digite o nome da nova Matéria/Curso:");
+            if (!novoNome) return;
+            
+            const result = await fetchAPI('/materias/nova', 'POST', { nome_materia: novoNome }, 'resultAuthReg');
+            if (result && !result.error) {
+                carregarMaterias(); 
+            }
+        }
+
+        // ==============================================
+        // FUNÇÕES DE AÇÃO
+        // ==============================================
+
+        async function registrarUsuario() {
+            const tipo = document.getElementById('regTipo').value;
+            const materiasSelecionadas = Array.from(document.querySelectorAll('.reg-materia-checkbox:checked'))
+                .map(cb => parseInt(cb.value));
+
+            const dataToRegister = {
+                email: document.getElementById('regEmail').value,
+                senha: document.getElementById('regSenha').value,
+                tipo_usuario: tipo,
+                nome: document.getElementById('regNome').value,
+                matricula: document.getElementById('regMatricula').value,
+                campo_especifico: document.getElementById('regCampoEspecifico').value,
+                id_materias: (tipo === 'ESTUDANTE' || tipo === 'PROFESSOR') ? materiasSelecionadas : []
+            };
+            await fetchAPI('/auth/registrar', 'POST', dataToRegister, 'resultAuthReg');
+        }
+
+        async function carregarDadosParaEdicao() {
+            const idUsuario = document.getElementById('manageId').value;
+            const tipo = document.getElementById('manageTipo').value;
+            const resultManageElement = document.getElementById('resultManage');
+            
+            if (!idUsuario) {
+                 resultManageElement.textContent = 'Forneça o ID do Usuário (Usuarios.id_usuario).';
+                 return;
+            }
+            
+            const email = prompt(`Para editar o Usuário ID ${idUsuario}, digite o EMAIL de login para confirmação:`);
+            const matricula = prompt(`E a MATRÍCULA:`);
+
+            if (!email || !matricula) {
+                 resultManageElement.textContent = 'Email e Matrícula são necessários para carregar os dados de edição.';
+                 return;
+            }
+
+            const searchData = { email, matricula, tipo_usuario: tipo };
+            const result = await fetchAPI('/usuarios/buscar_detalhes', 'POST', searchData, 'resultManage');
+
+            if (result && result.data) {
+                const data = result.data;
+                
+                document.getElementById('editEmail').value = data.email;
+                document.getElementById('editNome').value = data.nome;
+                document.getElementById('editMatricula').value = data.matricula;
+                document.getElementById('editCampoEspecifico').value = data.campo_especifico || '';
+                document.getElementById('editSenha').value = ''; 
+
+                const editCheckboxes = document.querySelectorAll('.edit-materia-checkbox');
+                editCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+
+                if (data.id_materias) {
+                    data.id_materias.forEach(id => {
+                        const checkbox = document.getElementById(`edit-materia-${id}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+                
+                resultManageElement.textContent = `Dados do Usuário ID ${idUsuario} (${tipo}) carregados. Altere os campos e clique em "Aplicar Edição Total".`;
+            } else {
+                 resultManageElement.textContent = 'Erro ao carregar dados. Verifique o ID/Email/Matrícula/Tipo.';
+            }
+        }
+
+        async function editarUsuario() {
+            const idUsuario = document.getElementById('manageId').value;
+            const tipo = document.getElementById('manageTipo').value;
+
+            const materiasSelecionadas = Array.from(document.querySelectorAll('.edit-materia-checkbox:checked'))
+                .map(cb => parseInt(cb.value));
+
+            const dataToEdit = {
+                email: document.getElementById('editEmail').value,
+                nova_senha: document.getElementById('editSenha').value, 
+                tipo_usuario: tipo,
+                nome: document.getElementById('editNome').value,
+                matricula: document.getElementById('editMatricula').value,
+                campo_especifico: document.getElementById('editCampoEspecifico').value,
+                id_materias: (tipo === 'ESTUDANTE' || tipo === 'PROFESSOR') ? materiasSelecionadas : []
+            };
+            
+            if (!dataToEdit.email || !dataToEdit.nome || !dataToEdit.matricula || !idUsuario) {
+                 document.getElementById('resultManage').textContent = 'ID, Email, Nome e Matrícula são obrigatórios para Edição.';
+                 return;
+            }
+
+            await fetchAPI(`/usuarios/editar/${idUsuario}`, 'PUT', dataToEdit, 'resultManage');
+        }
+
+        async function excluirUsuario() {
+            const idUsuario = document.getElementById('manageId').value;
+            if (!idUsuario) {
+                 document.getElementById('resultManage').textContent = 'Forneça o ID do Usuário a ser excluído.';
+                 return;
+            }
+            if (!confirm(`Tem certeza que deseja EXCLUIR o Usuário ID ${idUsuario} (e todos os dados relacionados)?`)) {
+                return;
+            }
+            await fetchAPI(`/usuarios/excluir/${idUsuario}`, 'DELETE', null, 'resultManage');
+        }
+
+        async function loginUsuario() {
+            const dataToLogin = {
+                email: document.getElementById('loginEmail').value,
+                senha: document.getElementById('loginSenha').value
+            };
+            await fetchAPI('/auth/login', 'POST', dataToLogin, 'resultAuthLogin');
+        }
+
+        async function buscarDetalhes() {
+            const dataToSearch = {
+                email: document.getElementById('buscaEmail').value,
+                matricula: document.getElementById('buscaMatricula').value,
+                tipo_usuario: document.getElementById('buscaTipo').value
+            };
+            await fetchAPI('/usuarios/buscar_detalhes', 'POST', dataToSearch, 'resultDetalhes');
+        }
+
+        async function listarPorMateria() {
+            const tipo = document.getElementById('listaTipo').value;
+            const idMateria = document.getElementById('listaMateria').value; 
+
+            if (!idMateria && idMateria !== '0') {
+                document.getElementById('resultLista').textContent = 'Selecione uma matéria ou "Todas as Matérias".';
+                return;
+            }
+            
+            await fetchAPI(`/${tipo}/por_materia/${idMateria}`, 'GET', null, 'resultLista');
+        }
+    </script>
+</body>
+</html>
